@@ -1,0 +1,9 @@
+numpy>=2.0
+pandas>=2.2
+matplotlib>=3.9
+scikit-learn==1.9.1
+joblib>=1.4
+cryptography>=44
+pqcrypto>=1.0.0
+qiskit>=2.1
+qiskit-aer>=0.17
