@@ -33,6 +33,8 @@ class SecureSessionResult:
     final_key: bytes | None = None
     final_key_fingerprint: str | None = None
     authenticated_messages: int = 0
+    simulated_attack_start_fraction: float | None = None
+    simulated_attack_start_window: int | None = None
     detector_history: list[dict[str, Any]] | None = None
 
 
@@ -48,12 +50,19 @@ def run_secure_session(
     protocol_backend: str = "probabilistic",
     attack_type: str = "none",
     attack_intensity: float = 1.0,
+    attack_start_fraction: float = 0.5,
     noise_level: float = 0.02,
     n_windows: int = 40,
     photons_per_window: int = 250,
     final_key_photons: int = 2000,
     seed: int = 2026,
 ) -> SecureSessionResult:
+    if not 0.0 <= attack_start_fraction < 1.0:
+        raise ValueError("attack_start_fraction must be at least 0.0 and less than 1.0")
+
+    attack_start_window = (
+        int(n_windows * attack_start_fraction) if attack_type != "none" else None
+    )
     detector = UnifiedAdaptiveMLDetector.from_joblib(model_path)
     rows = simulate_timeline(
         timeline_id=1,
@@ -63,7 +72,7 @@ def run_secure_session(
         noise_level=noise_level,
         attack_type=attack_type,
         attack_intensity=attack_intensity,
-        attack_start_frac=0.5,
+        attack_start_frac=attack_start_fraction,
         seed=seed,
     )
     decisions = [
@@ -79,6 +88,10 @@ def run_secure_session(
             protocol_backend=protocol_backend,
             windows_processed=len(rows),
             attack_windows_flagged=flagged,
+            simulated_attack_start_fraction=(
+                attack_start_fraction if attack_type != "none" else None
+            ),
+            simulated_attack_start_window=attack_start_window,
             detector_history=[d.as_dict() for d in decisions],
         )
 
@@ -105,6 +118,10 @@ def run_secure_session(
             windows_processed=len(rows),
             attack_windows_flagged=flagged,
             qber=bb84.qber,
+            simulated_attack_start_fraction=(
+                attack_start_fraction if attack_type != "none" else None
+            ),
+            simulated_attack_start_window=attack_start_window,
         )
 
     _authenticated_exchange(
@@ -176,5 +193,9 @@ def run_secure_session(
         final_key=final_key,
         final_key_fingerprint=hashlib.sha256(final_key).hexdigest()[:16],
         authenticated_messages=len(channel.transcript),
+        simulated_attack_start_fraction=(
+            attack_start_fraction if attack_type != "none" else None
+        ),
+        simulated_attack_start_window=attack_start_window,
         detector_history=[d.as_dict() for d in decisions],
     )
