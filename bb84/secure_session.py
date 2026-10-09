@@ -46,7 +46,7 @@ def _authenticated_exchange(channel, sender, message_type, payload):
 
 def run_secure_session(
     *,
-    model_path: str | Path = "models/rf_detector.joblib",
+    model_path: str | Path = "models/phase5_unified.joblib",
     protocol_backend: str = "probabilistic",
     attack_type: str = "none",
     attack_intensity: float = 1.0,

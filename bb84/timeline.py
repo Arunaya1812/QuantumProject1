@@ -25,6 +25,7 @@ labeled normal (0), windows from that index onward are labeled attack (1).
 
 import random
 from .protocol import run_bb84
+from .qiskit_protocol import run_bb84_qiskit_batch
 from .eavesdropper import Eavesdropper
 from .decoy import DecoyStateSource, signal_decoy_gap
 
@@ -39,6 +40,7 @@ def simulate_timeline(
     attack_intensity: float = 1.0,   # only used for intercept_resend
     attack_start_frac: float = None, # fraction (0-1) of timeline where attack begins
     seed: int = None,
+    protocol_backend: str = "probabilistic",
 ):
     """
     Simulate one full timeline of n_windows sequential BB84 sessions.
@@ -48,6 +50,8 @@ def simulate_timeline(
     """
     if seed is not None:
         random.seed(seed)
+    if protocol_backend not in {"probabilistic", "qiskit"}:
+        raise ValueError("protocol_backend must be 'probabilistic' or 'qiskit'")
 
     decoy_source = DecoyStateSource()
 
@@ -59,7 +63,7 @@ def simulate_timeline(
             attack_start_frac = random.uniform(0.3, 0.7)
         attack_start_window = int(n_windows * attack_start_frac)
 
-    rows = []
+    attack_states = []
     for w in range(n_windows):
         is_attack_active = (
             attack_type != "none"
@@ -72,12 +76,31 @@ def simulate_timeline(
         else:
             eve = Eavesdropper(attack_type="none")
 
-        result = run_bb84(
-            n_photons=photons_per_window,
-            noise_level=noise_level,
-            eavesdropper=eve,
-        )
+        attack_states.append((is_attack_active, eve))
 
+    if protocol_backend == "qiskit":
+        requests = [
+            {
+                "n_photons": photons_per_window,
+                "noise_level": noise_level,
+                "eavesdropper": eve,
+                "seed": None if seed is None else seed * 1000 + w,
+            }
+            for w, (_, eve) in enumerate(attack_states)
+        ]
+        bb84_results = run_bb84_qiskit_batch(requests)
+    else:
+        bb84_results = [
+            run_bb84(
+                n_photons=photons_per_window,
+                noise_level=noise_level,
+                eavesdropper=eve,
+            )
+            for _, eve in attack_states
+        ]
+
+    rows = []
+    for w, ((is_attack_active, _), result) in enumerate(zip(attack_states, bb84_results)):
         pns_flag = is_attack_active and attack_type == "pns"
         pulses = decoy_source.simulate_pulses(
             n_pulses=decoy_pulses_per_window, pns_attack=pns_flag
@@ -94,6 +117,7 @@ def simulate_timeline(
             "sifted_length": result.sifted_length,
             "signal_decoy_gap": round(gap, 5),
             "is_attack": int(is_attack_active),
+            "protocol_backend": protocol_backend,
         })
 
     return rows

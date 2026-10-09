@@ -13,6 +13,12 @@ def main():
     parser.add_argument("--backend", choices=["probabilistic", "qiskit"], default="probabilistic")
     parser.add_argument("--attack", choices=["none", "intercept_resend", "pns"], default="none")
     parser.add_argument("--intensity", type=float, default=1.0)
+    parser.add_argument(
+        "--attack-start",
+        type=float,
+        default=0.5,
+        help="fraction of monitoring windows before Eve starts (0.0 <= value < 1.0)",
+    )
     parser.add_argument("--noise", type=float, default=0.02)
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--windows", type=int, default=40)
@@ -23,6 +29,7 @@ def main():
         protocol_backend=args.backend,
         attack_type=args.attack,
         attack_intensity=args.intensity,
+        attack_start_fraction=args.attack_start,
         noise_level=args.noise,
         n_windows=args.windows,
         final_key_photons=args.photons,

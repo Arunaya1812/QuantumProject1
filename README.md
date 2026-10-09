@@ -189,6 +189,18 @@ python run_phase3_demo.py --attack pns
 python run_phase3_demo.py --attack intercept_resend --intensity 0.2
 ```
 
+Control when Eve begins as a fraction of the monitoring timeline. For
+example, `--attack-start 0.75` starts Eve at window 30 of a 40-window run:
+
+```text
+python run_phase3_demo.py --attack intercept_resend --intensity 0.2 --attack-start 0.75
+```
+
+Valid values satisfy `0.0 <= attack-start < 1.0`. The JSON result includes
+the simulated start fraction and start window as ground-truth evaluation
+metadata. These fields are known by the simulator, not inferred by the
+binary attack detector.
+
 The command prints only a final-key fingerprint, never the key itself. Classical-message signatures use ML-DSA-65 (FIPS 204), while hybrid key establishment uses ML-KEM-768. These library-backed primitives are appropriate for a research prototype; this project is not a production cryptographic implementation or a formal security proof.
 
 # Phase 4 - Qiskit Refinement and Benchmarking
@@ -229,3 +241,69 @@ python -m unittest discover -s tests -v
 - The current error-correction stage is a clearly labeled simulated reconciliation step. Replace it with Cascade or an LDPC implementation before treating key-rate figures as protocol-grade results.
 - Decoy-state behavior is modeled statistically and is not an optical multi-photon Qiskit simulation.
 - The benchmark measures a software simulator on the local machine; it does not claim hardware QKD throughput.
+
+# Phase 5 - Decoy-Aware Stacked Adaptive ML Fusion
+
+Phase 5 replaces the original OR-based unified rule with a leakage-safe stacked
+fusion detector. The Random Forest remains the primary classifier. A small
+fusion model combines its probability with three-window probability persistence,
+adaptive QBER evidence, adaptive signal-decoy-gap evidence, and calibration-
+normalized physical z-scores. Suspicious windows are quarantined so they cannot
+update either adaptive baseline.
+
+Train and evaluate Phase 5:
+
+```text
+python train_phase5_unified.py
+```
+
+The script splits by complete timeline, trains the fusion layer only from
+out-of-fold Random Forest probabilities, and evaluates once on untouched test
+timelines. It writes:
+
+- `models/phase5_unified.joblib`: production base RF plus stacked fusion model.
+- `outputs/phase5_evaluation_report.json`: expanded metrics, confusion matrices,
+  detection delay, paired ML/unified comparison, and claim limitations.
+- `outputs/phase5_detector_metrics.csv`: tabular accuracy, balanced accuracy,
+  precision, recall, specificity, F1, F2, MCC, FPR, FNR, ROC-AUC, and PR-AUC.
+- `outputs/phase5_detector_metrics.png`: Static vs Adaptive vs ML vs Unified bars.
+- `outputs/phase5_confusion_matrices.png`: four held-out confusion matrices.
+- `outputs/phase5_literature_comparison.csv`: five-paper comparison with explicit
+  warnings where protocols or datasets are not directly comparable.
+
+Regenerate the scenario graphs, now including the Unified detector:
+
+```text
+python compare_detectors.py
+```
+
+The defensible conclusion is that Unified is the best detector among this
+project's baselines on the same held-out timelines. Cross-paper numeric values
+are contextual because the papers use different protocols, attacks, datasets,
+and train/test designs; they do not establish universal superiority.
+
+## Phase 5 Qiskit detector evaluation
+
+Evaluate Static, Adaptive, ML, and Unified on matched probabilistic and hybrid
+Qiskit timelines:
+
+```text
+python evaluate_qiskit_phase5.py
+```
+
+This uses Qiskit Aer circuits for BB84 state preparation, channel flips, Eve's
+intercept-resend measurement, and Bob's measurement. Decoy/PNS pulse statistics
+remain statistical, so the output is labelled **hybrid Qiskit**, not IBM quantum
+hardware. The paired benchmark uses the same scenarios and seeds for both
+backends and writes:
+
+- `outputs/phase5_qiskit_evaluation.json`: all metrics, confusion counts,
+  detection delay, runtimes, and interpretation boundary.
+- `outputs/phase5_qiskit_metrics.csv`: one row per backend and detector.
+- `outputs/phase5_qiskit_detector_metrics.png`: all four detectors on Qiskit.
+- `outputs/phase5_backend_comparison.png`: Unified probabilistic versus Qiskit.
+
+The checked 20-timeline run produced 97.83% Qiskit accuracy and 97.24% Qiskit
+F1 for Unified, compared with 95.83% and 94.58% on the paired probabilistic
+set. This is evidence that the detector generalizes to circuit-generated QBER;
+it is not evidence that simulation is better than physical quantum hardware.

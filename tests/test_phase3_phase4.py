@@ -6,6 +6,8 @@ from bb84.eavesdropper import Eavesdropper
 from bb84.features import FEATURE_COLUMNS, OnlineFeatureEngineer
 from bb84.protocol import run_bb84
 from bb84.unified_detector import UnifiedAdaptiveMLDetector
+from bb84.secure_session import run_secure_session
+from bb84.adaptive_threshold import AdaptiveMultiSignalDetector, StaticThresholdDetector
 
 
 class _GapAwareModel:
@@ -21,6 +23,22 @@ class _GapAwareModel:
 
 
 class Phase34Tests(unittest.TestCase):
+    def test_fixed_qber_threshold_and_decoy_aware_adaptation(self):
+        static = StaticThresholdDetector(fixed_threshold=0.11)
+        self.assertFalse(static.update(0.10))
+        self.assertTrue(static.update(0.12))
+
+        adaptive = AdaptiveMultiSignalDetector(calibration_windows=2)
+        adaptive.update(0.01, 0.01)
+        adaptive.update(0.01, 0.01)
+        self.assertTrue(adaptive.update(0.01, 0.20))
+        self.assertFalse(adaptive.history[-1]["qber_flag"])
+        self.assertTrue(adaptive.history[-1]["gap_flag"])
+
+    def test_secure_session_rejects_invalid_attack_start(self):
+        with self.assertRaises(ValueError):
+            run_secure_session(attack_start_fraction=1.0, n_windows=10)
+
     def test_online_features_have_training_schema(self):
         features = OnlineFeatureEngineer().update(0.02, 0.01)
         self.assertEqual(list(features.as_dict()), FEATURE_COLUMNS)

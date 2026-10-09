@@ -120,6 +120,47 @@ class AdaptiveThresholdDetector:
         return flagged
 
 
+class AdaptiveMultiSignalDetector:
+    """Decoy-aware adaptive baseline for QBER and signal-decoy gap.
+
+    A QBER-only adaptive rule is structurally unable to detect PNS attacks.
+    This wrapper keeps independent, interpretable control charts for the two
+    physical observables and raises an alarm when either becomes anomalous.
+    The caller may quarantine suspicious observations from both baselines.
+    """
+
+    def __init__(
+        self,
+        calibration_windows: int = 10,
+        qber_k: float = 3.0,
+        gap_k: float = 3.0,
+        ema_alpha: float = 0.1,
+    ):
+        self.qber = AdaptiveThresholdDetector(calibration_windows, qber_k, ema_alpha)
+        self.gap = AdaptiveThresholdDetector(calibration_windows, gap_k, ema_alpha)
+        self.history = []
+
+    @property
+    def calibrated(self):
+        return self.qber.calibrated and self.gap.calibrated
+
+    def update(self, qber: float, signal_decoy_gap: float, allow_adaptation: bool = True) -> bool:
+        qber_flag = self.qber.update(qber, allow_adaptation=allow_adaptation)
+        gap_flag = self.gap.update(signal_decoy_gap, allow_adaptation=allow_adaptation)
+        flagged = bool(qber_flag or gap_flag)
+        self.history.append({
+            "qber": qber,
+            "signal_decoy_gap": signal_decoy_gap,
+            "qber_threshold": self.qber.history[-1]["threshold"],
+            "gap_threshold": self.gap.history[-1]["threshold"],
+            "qber_flag": bool(qber_flag),
+            "gap_flag": bool(gap_flag),
+            "flagged": flagged,
+            "adapted": bool(allow_adaptation and not flagged),
+        })
+        return flagged
+
+
 class StaticThresholdDetector:
     """
     A simple, non-adaptive baseline for comparison: a single fixed
@@ -128,12 +169,17 @@ class StaticThresholdDetector:
     threshold) that the adaptive detector is meant to improve on.
     """
 
-    def __init__(self, calibration_windows: int = 10, k: float = 3.0):
+    def __init__(
+        self,
+        calibration_windows: int = 10,
+        k: float = 3.0,
+        fixed_threshold: float | None = None,
+    ):
         self.calibration_windows = calibration_windows
         self.k = k
         self._calib_buffer = []
-        self._fixed_threshold = None
-        self.calibrated = False
+        self._fixed_threshold = fixed_threshold
+        self.calibrated = fixed_threshold is not None
         self.history = []
 
     def update(self, value: float) -> bool:
