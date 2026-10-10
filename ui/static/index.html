@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Basis — QKD link security</title>
+  <meta name="description" content="Monitor a decoy-state BB84 link, catch eavesdroppers with adaptive ML detection, and establish post-quantum authenticated keys.">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/static/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail" aria-label="Primary">
+      <a class="brand" href="#/monitor" aria-label="Basis home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="8" fill="var(--ink)"/>
+          <path d="M16 8v16M8 16h16" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M10.6 10.6l10.8 10.8M21.4 10.6L10.6 21.4" stroke="#8FA6FF" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <span class="brand-name">Basis</span>
+      </a>
+
+      <nav class="nav">
+        <a href="#/monitor" data-route="monitor">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10h3l2-5 3 10 2-6 1.5 1H18" /></svg>
+          <span>Link monitor</span>
+          <i class="live-dot" id="nav-live" hidden></i>
+        </a>
+        <a href="#/sessions" data-route="sessions">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7" cy="10" r="3.2"/><path d="M10.2 10H18M15 10v3M17.5 10v2"/></svg>
+          <span>Key sessions</span>
+        </a>
+        <a href="#/inspector" data-route="inspector">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4v12M9 4l-0 12M14 4l-4 12M18 6L9.5 14"/></svg>
+          <span>Protocol inspector</span>
+        </a>
+        <a href="#/evaluation" data-route="evaluation">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 17V9M8 17V4M13 17v-6M18 17V7"/></svg>
+          <span>Detector evaluation</span>
+        </a>
+        <a href="#/pqc" data-route="pqc">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l6 2.5v5c0 3.6-2.6 6.3-6 7.5-3.4-1.2-6-3.9-6-7.5V5z"/><path d="M7.3 10l2 2 3.6-3.8"/></svg>
+          <span>Post-quantum auth</span>
+        </a>
+      </nav>
+
+      <div class="rail-foot" id="env">
+        <p class="env-title">Environment</p>
+        <ul class="env-list" id="env-list">
+          <li class="env-item">Checking…</li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="sheet" id="main" tabindex="-1">
+      <section class="page" id="page-monitor" data-page="monitor" hidden></section>
+      <section class="page" id="page-sessions" data-page="sessions" hidden></section>
+      <section class="page" id="page-inspector" data-page="inspector" hidden></section>
+      <section class="page" id="page-evaluation" data-page="evaluation" hidden></section>
+      <section class="page" id="page-pqc" data-page="pqc" hidden></section>
+    </main>
+  </div>
+
+  <div class="tooltip" id="tooltip" role="status" hidden></div>
+  <div class="toast-zone" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
